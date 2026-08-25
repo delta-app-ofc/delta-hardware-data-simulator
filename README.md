@@ -16,15 +16,15 @@ HTTP, processamento de telemetria ou regras do backend.
 
 A CLI gera de 1 a 100 documentos por execução para sete coleções:
 
-| Banco | Coleção | Finalidade |
-| --- | --- | --- |
-| `db_delta_telemetry` | `pulses_raw` | Pacotes de pulsos do ESP32 |
-| `db_delta_telemetry` | `consumption_summary` | Resumos de consumo por janela |
-| `db_delta_telemetry` | `device_status` | Estado atual dos dispositivos |
-| `db_delta_app` | `user_preferences` | Preferências dos usuários |
-| `db_delta_app` | `alerts_history` | Histórico de alertas |
-| `db_delta_app` | `chat_sessions` | Sessões e mensagens do chatbot |
-| `db_delta_app` | `chat_feedback` | Avaliações vinculadas às sessões |
+| Banco                | Coleção               | Finalidade                       |
+|----------------------|-----------------------|----------------------------------|
+| `db_delta_telemetry` | `pulses_raw`          | Pacotes de pulsos do ESP32       |
+| `db_delta_telemetry` | `consumption_summary` | Resumos de consumo por janela    |
+| `db_delta_telemetry` | `device_status`       | Estado atual dos dispositivos    |
+| `db_delta_app`       | `user_preferences`    | Preferências dos usuários        |
+| `db_delta_app`       | `alerts_history`      | Histórico de alertas             |
+| `db_delta_app`       | `chat_sessions`       | Sessões e mensagens do chatbot   |
+| `db_delta_app`       | `chat_feedback`       | Avaliações vinculadas às sessões |
 
 Os documentos seguem os validators implementados nos scripts
 [`delta-telemetry/script-collections.js`](../delta-nosql-database/scripts/delta-telemetry/script-collections.js)
