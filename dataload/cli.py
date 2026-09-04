@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from typing import NoReturn
 
 from bson import json_util
 
@@ -65,10 +66,34 @@ def criar_parser() -> ParserDataload:
         action="store_true",
         help="imprime os documentos sem inserir no MongoDB",
     )
+    parser.add_argument(
+        "--continuo",
+        action="store_true",
+        help="gera os pacotes em tempo real, respeitando o intervalo informado",
+    )
+    parser.add_argument(
+        "--intervalo-segundos",
+        type=inteiro,
+        default=300,
+        help="intervalo entre pacotes no modo --continuo (padrão: 300)",
+    )
+    parser.add_argument(
+        "--tempo-maximo",
+        type=inteiro,
+        default=3600,
+        help="tempo máximo do modo --continuo, em segundos (padrão: 3600)",
+    )
     return parser
 
 
-def validar_argumentos(parser: ParserDataload, colecao: str, quantidade: int) -> None:
+def validar_argumentos(
+    parser: ParserDataload,
+    colecao: str,
+    quantidade: int,
+    continuo: bool,
+    intervalo_segundos: int,
+    tempo_maximo: int,
+) -> None:
     """Valida todas as regras antes que algum documento seja gerado."""
     if colecao not in GERADORES:
         nomes_validos = ", ".join(GERADORES)
@@ -77,13 +102,60 @@ def validar_argumentos(parser: ParserDataload, colecao: str, quantidade: int) ->
     if not 1 <= quantidade <= 100:
         parser.error("a quantidade deve estar entre 1 e 100")
 
+    if continuo and colecao != "pulses_raw":
+        parser.error("a opção --continuo só pode ser usada com pulses_raw")
+
+    if intervalo_segundos <= 0:
+        parser.error("o intervalo deve ser maior que zero")
+
+    if tempo_maximo <= 0:
+        parser.error("o tempo máximo deve ser maior que zero")
+
 
 def executar(argv: list[str] | None = None) -> int:
     parser = criar_parser()
     argumentos = parser.parse_args(argv)
-    validar_argumentos(parser, argumentos.colecao, argumentos.quantidade)
+    validar_argumentos(
+        parser,
+        argumentos.colecao,
+        argumentos.quantidade,
+        argumentos.continuo,
+        argumentos.intervalo_segundos,
+        argumentos.tempo_maximo,
+    )
 
     try:
+        if argumentos.continuo:
+            gerador = pulses_raw.gerar_continuo(
+                intervalo_segundos=argumentos.intervalo_segundos,
+                tempo_maximo=argumentos.tempo_maximo,
+            )
+            pacotes_no_tempo = (
+                argumentos.tempo_maximo + argumentos.intervalo_segundos - 1
+            ) // argumentos.intervalo_segundos
+            limite_pacotes = min(argumentos.quantidade, pacotes_no_tempo)
+
+            if argumentos.dry_run:
+                for _ in range(limite_pacotes):
+                    documento = next(gerador)
+                    print(json_util.dumps(documento, indent=2))
+                return 0
+
+            colecao = obter_colecao(
+                BANCOS_POR_COLECAO[argumentos.colecao], argumentos.colecao
+            )
+            inseridos = 0
+            for _ in range(limite_pacotes):
+                documento = next(gerador)
+                colecao.insert_one(documento)
+                inseridos += 1
+
+            print(
+                f"{inseridos} documento(s) inserido(s) em "
+                f"{BANCOS_POR_COLECAO[argumentos.colecao]}.{argumentos.colecao}."
+            )
+            return 0
+
         documentos = GERADORES[argumentos.colecao](argumentos.quantidade)
 
         if argumentos.dry_run:

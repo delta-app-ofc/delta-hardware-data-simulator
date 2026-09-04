@@ -80,6 +80,31 @@ Para conferir três documentos sem inserir no banco:
 python -m dataload.cli consumption_summary 3 --dry-run
 ```
 
+Para simular o envio do ESP32 em tempo real, usando uma janela de cinco
+minutos entre os pacotes:
+
+```powershell
+python -m dataload.cli pulses_raw 3 --continuo
+```
+
+Nesse modo, o primeiro pacote é gerado imediatamente e os demais aguardam o
+intervalo configurado. O número informado continua limitando a quantidade de
+pacotes. Para testar com um intervalo menor:
+
+```powershell
+python -m dataload.cli pulses_raw 3 --continuo --intervalo-segundos 10
+```
+
+O modo contínuo também pode ser encerrado por tempo. Neste exemplo, ele roda
+por no máximo um minuto e pode gerar até três pacotes:
+
+```powershell
+python -m dataload.cli pulses_raw 3 --continuo --intervalo-segundos 10 --tempo-maximo 60
+```
+
+O valor de `quantidade` continua sendo um limite de segurança entre 1 e 100;
+o gerador também encerra quando atingir `tempo-maximo`.
+
 O `--dry-run` imprime MongoDB Extended JSON válido. Datas aparecem com
 `$date` e IDs BSON podem aparecer com `$oid`; isso preserva os tipos que serão
 usados no insert.
@@ -126,6 +151,8 @@ Se `make` estiver instalado, o mesmo comando pode ser executado por variáveis:
 ```text
 make dataload COLLECTION=pulses_raw N=20
 make dataload COLLECTION=alerts_history N=3 DRY_RUN=--dry-run
+make dataload COLLECTION=pulses_raw N=3 OPTIONS="--continuo --intervalo-segundos 10"
+make dataload COLLECTION=pulses_raw N=3 OPTIONS="--continuo --intervalo-segundos 10 --tempo-maximo 60"
 ```
 
 O Makefile é apenas uma conveniência. Em instalações do Windows sem `make`,
