@@ -88,11 +88,14 @@ def gerar_continuo(
     device_id = f"ESP32-SP-{random.randint(1, 9_999):04d}"
     uptime_inicial_ms = random.randint(1_800_000, 86_400_000)
     indice = 0
-    tempo_gasto = 0
+    prazo = time.monotonic() + tempo_maximo
 
-    while tempo_gasto < tempo_maximo:
+    while time.monotonic() < prazo:
         sent_at = datetime.now(timezone.utc).replace(microsecond=0)
         yield _criar_pacote(device_id, uptime_inicial_ms, indice, sent_at)
         indice += 1
-        time.sleep(intervalo_segundos)
-        tempo_gasto += intervalo_segundos
+
+        tempo_restante = prazo - time.monotonic()
+        if tempo_restante <= 0:
+            break
+        time.sleep(min(intervalo_segundos, tempo_restante))

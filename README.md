@@ -95,8 +95,9 @@ pacotes. Para testar com um intervalo menor:
 python -m dataload.cli pulses_raw 3 --continuo --intervalo-segundos 10
 ```
 
-O modo contínuo também pode ser encerrado por tempo. Neste exemplo, ele roda
-por no máximo um minuto e pode gerar até três pacotes:
+Exemplo completo combinando as três opções: o modo contínuo, o intervalo entre
+pacotes e o tempo máximo de execução. Neste caso, roda por no máximo um minuto
+e pode gerar até três pacotes:
 
 ```powershell
 python -m dataload.cli pulses_raw 3 --continuo --intervalo-segundos 10 --tempo-maximo 60

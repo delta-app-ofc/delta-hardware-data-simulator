@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from itertools import islice
 from typing import NoReturn
 
 from bson import json_util
@@ -130,14 +131,9 @@ def executar(argv: list[str] | None = None) -> int:
                 intervalo_segundos=argumentos.intervalo_segundos,
                 tempo_maximo=argumentos.tempo_maximo,
             )
-            pacotes_no_tempo = (
-                argumentos.tempo_maximo + argumentos.intervalo_segundos - 1
-            ) // argumentos.intervalo_segundos
-            limite_pacotes = min(argumentos.quantidade, pacotes_no_tempo)
 
             if argumentos.dry_run:
-                for _ in range(limite_pacotes):
-                    documento = next(gerador)
+                for documento in islice(gerador, argumentos.quantidade):
                     print(json_util.dumps(documento, indent=2))
                 return 0
 
@@ -145,8 +141,7 @@ def executar(argv: list[str] | None = None) -> int:
                 BANCOS_POR_COLECAO[argumentos.colecao], argumentos.colecao
             )
             inseridos = 0
-            for _ in range(limite_pacotes):
-                documento = next(gerador)
+            for documento in islice(gerador, argumentos.quantidade):
                 colecao.insert_one(documento)
                 inseridos += 1
 
