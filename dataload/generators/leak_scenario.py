@@ -1,20 +1,4 @@
-"""Gerador de cenário de VAZAMENTO SIMULADO para consumption_summary.
-
-Provisório: até o hardware real (contratado) enviar dados de vazamento de
-verdade, este gerador serve pra validar as regras/modelo de detecção do
-delta-artificial-intelligence (pasta `detection/` daquele repositório). Ao
-contrário de `consumption_summary.gerar()`, aqui o consumo NUNCA cai a ~zero
-durante a janela simulada — essa é a assinatura que diferencia um vazamento de
-um uso normal (que é sempre em rajadas curtas, intercaladas com consumo zero).
-
-Nomenclatura: o nome desta função (`generate`) está em inglês, diferente do
-`gerar()` já usado pelos outros geradores deste módulo — decisão da tarefa que
-criou este arquivo (identificadores de código em inglês, comentários em
-português). Isso gera uma pequena inconsistência com o restante deste
-repositório, que fica registrada aqui de propósito; renomear os geradores já
-existentes é uma decisão maior, à parte, que cabe ao time do
-delta-hardware-data-simulator.
-"""
+"""Gerador de cenário de VAZAMENTO SIMULADO para consumption_summary."""
 
 import random
 from datetime import datetime, timedelta, timezone
