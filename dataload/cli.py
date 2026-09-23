@@ -13,6 +13,7 @@ from dataload.generators import (
     chat_sessions,
     consumption_summary,
     device_status,
+    leak_scenario,
     pulses_raw,
     user_preferences,
 )
@@ -84,6 +85,16 @@ def criar_parser() -> ParserDataload:
         default=3600,
         help="tempo máximo do modo --continuo, em segundos (padrão: 3600)",
     )
+    parser.add_argument(
+        "--scenario",
+        choices=["normal", "leak"],
+        default="normal",
+        help=(
+            "só se aplica a consumption_summary: 'normal' usa o gerador padrão, "
+            "'leak' usa leak_scenario.generate (fluxo contínuo simulado, "
+            "provisório até existir hardware real de vazamento)"
+        ),
+    )
     return parser
 
 
@@ -94,6 +105,7 @@ def validar_argumentos(
     continuo: bool,
     intervalo_segundos: int,
     tempo_maximo: int,
+    scenario: str,
 ) -> None:
     """Valida todas as regras antes que algum documento seja gerado."""
     if colecao not in GERADORES:
@@ -112,6 +124,9 @@ def validar_argumentos(
     if tempo_maximo <= 0:
         parser.error("o tempo máximo deve ser maior que zero")
 
+    if scenario == "leak" and colecao != "consumption_summary":
+        parser.error("--scenario leak só pode ser usado com consumption_summary")
+
 
 def executar(argv: list[str] | None = None) -> int:
     parser = criar_parser()
@@ -123,6 +138,7 @@ def executar(argv: list[str] | None = None) -> int:
         argumentos.continuo,
         argumentos.intervalo_segundos,
         argumentos.tempo_maximo,
+        argumentos.scenario,
     )
 
     try:
@@ -151,7 +167,15 @@ def executar(argv: list[str] | None = None) -> int:
             )
             return 0
 
-        documentos = GERADORES[argumentos.colecao](argumentos.quantidade)
+        # --scenario leak só é válido pra consumption_summary (checado em
+        # validar_argumentos); nesse caso troca o gerador padrão pelo
+        # leak_scenario, mantendo o mesmo destino (BANCOS_POR_COLECAO).
+        gerador = (
+            leak_scenario.generate
+            if argumentos.colecao == "consumption_summary" and argumentos.scenario == "leak"
+            else GERADORES[argumentos.colecao]
+        )
+        documentos = gerador(argumentos.quantidade)
 
         if argumentos.dry_run:
             print(json_util.dumps(documentos, indent=2))
