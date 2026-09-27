@@ -15,6 +15,7 @@ from dataload.generators import (
     device_status,
     pulses_raw,
     user_preferences,
+    weather_daily,
 )
 from dataload.mongo_client import ConfiguracaoMongoError, obter_colecao
 
@@ -27,6 +28,7 @@ BANCOS_POR_COLECAO = {
     "alerts_history": "db_delta_app",
     "chat_sessions": "db_delta_app",
     "chat_feedback": "db_delta_app",
+    "weather_daily": "db_delta_app",
 }
 
 GERADORES = {
@@ -37,6 +39,7 @@ GERADORES = {
     "alerts_history": alerts_history.gerar,
     "chat_sessions": chat_sessions.gerar,
     "chat_feedback": chat_feedback.gerar,
+    "weather_daily": weather_daily.gerar,
 }
 
 
