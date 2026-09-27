@@ -3,7 +3,6 @@
 import argparse
 import sys
 from itertools import islice
-from typing import NoReturn
 
 from bson import json_util
 
