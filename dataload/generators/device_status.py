@@ -15,18 +15,21 @@ def gerar(quantidade: int) -> list[dict]:
             "wifi_signal_rssi": "good",
             "minutes_since_ping": 2,
             "unavailability_reason": None,
+            "battery_level": 88,
         },
         {
             "connectivity_status": "unstable",
             "wifi_signal_rssi": "weak",
             "minutes_since_ping": 15,
             "unavailability_reason": "SINAL WI-FI INSTÁVEL",
+            "battery_level": 16,
         },
         {
             "connectivity_status": "offline",
             "wifi_signal_rssi": "critical",
             "minutes_since_ping": 90,
             "unavailability_reason": "SEM CONEXÃO COM O DISPOSITIVO",
+            "battery_level": None,
         },
     )
 
@@ -42,6 +45,7 @@ def gerar(quantidade: int) -> list[dict]:
                 "firmware_version": f"v1.2.{indice % 10}",
                 "connectivity_status": cenario["connectivity_status"],
                 "unavailability_reason": cenario["unavailability_reason"],
+                "battery_level": cenario["battery_level"],
             }
         )
 
