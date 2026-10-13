@@ -1,0 +1,6 @@
+services:
+  dry-run:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["consumption_summary", "1", "--dry-run"]
