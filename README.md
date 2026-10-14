@@ -54,8 +54,20 @@ Copy-Item .env.example .env
 O valor padrão do exemplo aponta para um MongoDB local:
 
 ```env
-MONGO_URI=mongodb://localhost:27017
+MONGO_URI_TELEMETRY=mongodb://localhost:27017
+MONGO_URI_APP=mongodb://localhost:27017
 ```
+
+`MONGO_URI_TELEMETRY` atende `db_delta_telemetry` (`consumption_summary` e
+`device_status`); `MONGO_URI_APP` atende `db_delta_app` (`user_preferences`,
+`alerts_history`, `chat_sessions` e `chat_feedback`). Cada banco reutiliza seu
+próprio cliente. O gerador legado `pulses_raw` também usa a conexão de telemetria,
+mas continua fora do modelo atual.
+
+Se os dois bancos estiverem na mesma instância, ainda é possível definir somente
+`MONGO_URI`: ela serve de alternativa quando a variável específica do banco não
+estiver preenchida. Uma URI específica preenchida tem prioridade; erros de conexão
+não redirecionam a carga para outra instância.
 
 Altere somente o `.env` local quando precisar de outra instância. O arquivo é
 ignorado pelo Git e não deve conter credenciais destinadas ao repositório.
