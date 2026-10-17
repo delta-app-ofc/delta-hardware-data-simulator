@@ -13,9 +13,13 @@ def gerar_periodo(cenario):
 
     for sessao in sessoes(cenario):
         sorteio = aleatorio(cenario.seed, "feedback", sessao["_id"])
-        yield {"_id": identificador("chat_feedback", sessao["_id"]),
-               "session_id": sessao["_id"], "is_satisfied": sorteio.random() < 0.8,
-               "user_comment": "AVALIACAO SIMULADA", "created_at": sessao["last_activity_at"] + timedelta(seconds=10)}
+        yield {
+            "_id": identificador("chat_feedback", sessao["_id"]),
+            "session_id": sessao["_id"],
+            "is_satisfied": sorteio.random() < 0.8,
+            "user_comment": "AVALIACAO SIMULADA",
+            "created_at": sessao["last_activity_at"] + timedelta(seconds=10),
+        }
 
 
 class SemSessoesChatError(RuntimeError):

@@ -1,0 +1,534 @@
+{
+  "description": "Snapshot dos validators executaveis do delta-mongo-database. Apenas testes, sem dados.",
+  "sources": {
+    "../delta-mongo-database/scripts/delta-app/script-collections.js": "aece48cfba94d56ea1aae12eff039a2b1f4026983989e9966584346f93a0751b",
+    "../delta-mongo-database/scripts/delta-telemetry/script-collections.js": "a40b03a1aba77a57eb7ac1ac1b01c7a723309502178fc4da5030a6b876a3c288"
+  },
+  "collections": {
+    "db_delta_app.user_preferences": {
+      "bsonType": "object",
+      "required": [
+        "user_id",
+        "dark_mode_enabled"
+      ],
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "user_id": {
+          "bsonType": "int",
+          "description": "Referência ao usuário (ID do PostgreSQL)"
+        },
+        "daily_liters_target": {
+          "bsonType": "int",
+          "description": "Meta diária de consumo em litros"
+        },
+        "notifications_enabled": {
+          "bsonType": "bool",
+          "description": "Ativa/desativa push notifications"
+        },
+        "quiet_hours": {
+          "bsonType": "object",
+          "description": "Janela de horário silencioso",
+          "properties": {
+            "start_hour": {
+              "bsonType": "string",
+              "description": "Horário da abertura da janela de silenciamento de notificações"
+            },
+            "end_hour": {
+              "bsonType": "string",
+              "description": "Horário da encerramento da janela de silenciamento de notificações"
+            }
+          }
+        },
+        "dark_mode_enabled": {
+          "bsonType": "bool",
+          "description": "Preferência visual do app"
+        }
+      }
+    },
+    "db_delta_app.alerts_history": {
+      "bsonType": "object",
+      "required": [
+        "device_id",
+        "user_id",
+        "alert_type",
+        "triggered_at"
+      ],
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "device_id": {
+          "bsonType": "string",
+          "description": "Dispositivo que originou o alerta"
+        },
+        "user_id": {
+          "bsonType": "int",
+          "description": "Usuário notificado (referência ao ID do PostgreSQL)"
+        },
+        "alert_type": {
+          "bsonType": "string",
+          "enum": [
+            "vazamento_continuo",
+            "fluxo_atipico",
+            "dispositivo_offline",
+            "leitura_impossivel"
+          ],
+          "description": "Tipo de anomalia detectada"
+        },
+        "triggered_at": {
+          "bsonType": "date",
+          "description": "Momento de abertura do alerta"
+        },
+        "resolved_at": {
+          "bsonType": [
+            "date",
+            "null"
+          ],
+          "description": "Momento de resolução (null enquanto ativo)"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            null
+          ],
+          "description": "Nível de severidade"
+        }
+      }
+    },
+    "db_delta_app.chat_sessions": {
+      "bsonType": "object",
+      "required": [
+        "user_id",
+        "started_at"
+      ],
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "user_id": {
+          "bsonType": "int",
+          "description": "Usuário dono da sessão (referência ao ID do PostgreSQL)"
+        },
+        "started_at": {
+          "bsonType": "date",
+          "description": "Início da sessão"
+        },
+        "last_activity_at": {
+          "bsonType": "date",
+          "description": "Última interação"
+        },
+        "is_open": {
+          "bsonType": "bool",
+          "description": "Sessão aceita novas mensagens"
+        },
+        "is_active": {
+          "bsonType": "bool",
+          "description": "Sessão em atendimento agora"
+        },
+        "is_deleted": {
+          "bsonType": "bool",
+          "description": "Soft delete (não remove o documento)"
+        },
+        "messages": {
+          "bsonType": "array",
+          "description": "Mensagens da sessão (máx. 50-100)",
+          "items": {
+            "bsonType": "object",
+            "required": [
+              "role",
+              "content_type",
+              "content",
+              "api_status_code"
+            ],
+            "dependencies": {
+              "agent_name": [
+                "response_time_ms"
+              ],
+              "response_time_ms": [
+                "agent_name"
+              ]
+            },
+            "properties": {
+              "role": {
+                "enum": [
+                  "user",
+                  "bot"
+                ],
+                "description": "Remetente da mensagem: user -> usuário do app / bot: o modelo de IA"
+              },
+              "content_type": {
+                "bsonType": "string",
+                "enum": [
+                  "text",
+                  "function"
+                ],
+                "description": "Tipo de conteúdo da mensagem: texto ou chamada de função"
+              },
+              "content": {
+                "bsonType": "string",
+                "description": "Conteúdo da mensagem na íntegra (texto ou JSON de função)"
+              },
+              "sent_at": {
+                "bsonType": "date",
+                "description": "Horário de envio da mensagem"
+              },
+              "api_status_code": {
+                "bsonType": "int",
+                "description": "Código do status enviado pela API"
+              },
+              "agent_name": {
+                "bsonType": "string",
+                "minLength": 1,
+                "description": "Especialista responsável pela resposta, sem incluir juiz ou roteador"
+              },
+              "response_time_ms": {
+                "bsonType": [
+                  "int",
+                  "long"
+                ],
+                "minimum": 0,
+                "description": "Duração da execução do especialista em milissegundos, medida pelo backend"
+              }
+            }
+          }
+        }
+      }
+    },
+    "db_delta_app.chat_feedback": {
+      "bsonType": "object",
+      "required": [
+        "session_id",
+        "is_satisfied"
+      ],
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "session_id": {
+          "bsonType": "objectId",
+          "description": "Referência a chat_sessions._id"
+        },
+        "is_satisfied": {
+          "bsonType": "bool",
+          "description": "Avaliação binária (true = 👍, false = 👎)"
+        },
+        "user_comment": {
+          "bsonType": [
+            "string",
+            "null"
+          ],
+          "description": "Feedback livre do usuário"
+        },
+        "created_at": {
+          "bsonType": "date",
+          "description": "Timestamp do feedback"
+        }
+      }
+    },
+    "db_delta_app.weather_daily": {
+      "bsonType": "object",
+      "required": [
+        "location",
+        "hours",
+        "samples",
+        "created_at"
+      ],
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "location": {
+          "bsonType": "object",
+          "required": [
+            "city",
+            "state",
+            "country"
+          ],
+          "properties": {
+            "city": {
+              "bsonType": "string",
+              "description": "Cidade referente aos dados meteorológicos"
+            },
+            "state": {
+              "bsonType": "string",
+              "description": "Estado ou unidade federativa da localização"
+            },
+            "country": {
+              "bsonType": "string",
+              "description": "Código do país da localização"
+            }
+          }
+        },
+        "weather_date": {
+          "bsonType": "date",
+          "description": "Data de referência do documento, normalizada para o início do dia"
+        },
+        "hours": {
+          "bsonType": "array",
+          "description": "Observações meteorológicas coletadas ao longo do dia",
+          "maxItems": 24,
+          "items": {
+            "bsonType": "object",
+            "required": [
+              "hour",
+              "observed_at",
+              "temperature_c",
+              "feels_like_c",
+              "humidity_percent",
+              "rain_mm",
+              "wind_speed_mps",
+              "condition"
+            ],
+            "properties": {
+              "hour": {
+                "bsonType": "int",
+                "minimum": 0,
+                "maximum": 23,
+                "description": "Hora da observação, entre 0 e 23"
+              },
+              "observed_at": {
+                "bsonType": "date",
+                "description": "Timestamp correspondente à observação meteorológica"
+              },
+              "temperature_c": {
+                "bsonType": [
+                  "double",
+                  "int",
+                  "long",
+                  "decimal"
+                ],
+                "description": "Temperatura observada em graus Celsius"
+              },
+              "feels_like_c": {
+                "bsonType": [
+                  "double",
+                  "int",
+                  "long",
+                  "decimal"
+                ],
+                "description": "Sensação térmica em graus Celsius"
+              },
+              "humidity_percent": {
+                "bsonType": [
+                  "int",
+                  "long",
+                  "double",
+                  "decimal"
+                ],
+                "minimum": 0,
+                "maximum": 100,
+                "description": "Umidade relativa do ar em percentual"
+              },
+              "rain_mm": {
+                "bsonType": [
+                  "double",
+                  "int",
+                  "long",
+                  "decimal"
+                ],
+                "minimum": 0,
+                "description": "Volume de chuva registrado em milímetros"
+              },
+              "wind_speed_mps": {
+                "bsonType": [
+                  "double",
+                  "int",
+                  "long",
+                  "decimal"
+                ],
+                "minimum": 0,
+                "description": "Velocidade do vento em metros por segundo"
+              },
+              "condition": {
+                "bsonType": "string",
+                "description": "Condição meteorológica principal da observação"
+              }
+            }
+          }
+        },
+        "samples": {
+          "bsonType": "int",
+          "minimum": 0,
+          "maximum": 24,
+          "description": "Quantidade de observações horárias armazenadas no documento"
+        },
+        "created_at": {
+          "bsonType": "date",
+          "description": "Timestamp de criação do documento diário"
+        },
+        "updated_at": {
+          "bsonType": "date",
+          "description": "Timestamp da atualização mais recente do documento diário"
+        }
+      }
+    },
+    "db_delta_telemetry.consumption_summary": {
+      "bsonType": "object",
+      "required": [
+        "device_id",
+        "user_id",
+        "window_started_at",
+        "window_finished_at",
+        "consumption_liters"
+      ],
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "device_id": {
+          "bsonType": "string",
+          "description": "Identificador do dispositivo"
+        },
+        "user_id": {
+          "bsonType": "int",
+          "description": "ID do usuário dono do dispositivo (referência para PostgreSQL)"
+        },
+        "window_started_at": {
+          "bsonType": "date",
+          "description": "Início da janela de consumo"
+        },
+        "window_finished_at": {
+          "bsonType": "date",
+          "description": "Fim da janela de consumo"
+        },
+        "consumption_liters": {
+          "bsonType": "double",
+          "description": "Volume total consumido na janela"
+        },
+        "lpm_average": {
+          "bsonType": "double",
+          "description": "Vazão média em litros por minuto"
+        },
+        "anomaly_detected": {
+          "bsonType": "bool",
+          "description": "Flag setada pela IA para anomalias"
+        }
+      }
+    },
+    "db_delta_telemetry.device_status": {
+      "bsonType": "object",
+      "required": [
+        "device_id"
+      ],
+      "dependencies": {
+        "available_seconds": [
+          "availability_started_at",
+          "availability_updated_at",
+          "unavailabilities"
+        ],
+        "availability_started_at": [
+          "available_seconds"
+        ],
+        "availability_updated_at": [
+          "available_seconds"
+        ],
+        "unavailabilities": [
+          "available_seconds"
+        ]
+      },
+      "properties": {
+        "_id": {
+          "bsonType": "objectId"
+        },
+        "device_id": {
+          "bsonType": "string",
+          "description": "Identificador único do dispositivo"
+        },
+        "last_ping_at": {
+          "bsonType": "date",
+          "description": "Timestamp do último contato"
+        },
+        "wifi_signal_rssi": {
+          "enum": [
+            "excellent",
+            "good",
+            "weak",
+            "critical",
+            null
+          ],
+          "description": "Classificação do sinal Wi-Fi"
+        },
+        "firmware_version": {
+          "bsonType": "string",
+          "description": "Versão do firmware instalado"
+        },
+        "connectivity_status": {
+          "enum": [
+            "online",
+            "offline",
+            "unstable",
+            null
+          ],
+          "description": "Status de conectividade"
+        },
+        "battery_level": {
+          "bsonType": [
+            "int",
+            "null"
+          ],
+          "description": "Nível de bateria"
+        },
+        "availability_started_at": {
+          "bsonType": "date",
+          "description": "Início do período coberto pelo contador e pelas indisponibilidades"
+        },
+        "availability_updated_at": {
+          "bsonType": "date",
+          "description": "Instante até o qual os tempos foram contabilizados pelo backend"
+        },
+        "available_seconds": {
+          "bsonType": [
+            "int",
+            "long"
+          ],
+          "minimum": 0,
+          "description": "Tempo online acumulado, em segundos, no período de disponibilidade"
+        },
+        "unavailabilities": {
+          "bsonType": "array",
+          "description": "Intervalos de indisponibilidade contabilizados no mesmo período",
+          "items": {
+            "bsonType": "object",
+            "required": [
+              "started_at",
+              "ended_at",
+              "unavailable_seconds",
+              "unavailability_reason"
+            ],
+            "properties": {
+              "started_at": {
+                "bsonType": "date"
+              },
+              "ended_at": {
+                "bsonType": [
+                  "date",
+                  "null"
+                ],
+                "description": "null enquanto a indisponibilidade estiver aberta"
+              },
+              "unavailable_seconds": {
+                "bsonType": [
+                  "int",
+                  "long"
+                ],
+                "minimum": 0,
+                "description": "Segundos até ended_at, ou availability_updated_at quando aberta"
+              },
+              "unavailability_reason": {
+                "bsonType": [
+                  "string",
+                  "null"
+                ],
+                "description": "Motivo do intervalo; null quando desconhecido"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
