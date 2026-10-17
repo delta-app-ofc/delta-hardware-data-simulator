@@ -156,8 +156,11 @@ class Cenario:
     inicio: date
     fim: date
     seed: int = 42
+    janela_minutos: int = 5
 
     def __post_init__(self):
+        if self.janela_minutos not in (5, 60):
+            raise ValueError("A janela deve ter 5 ou 60 minutos.")
         if not 1 <= (self.fim - self.inicio).days <= 366:
             raise ValueError(
                 "O período deve conter de 1 a 366 dias completos; fim é exclusivo."

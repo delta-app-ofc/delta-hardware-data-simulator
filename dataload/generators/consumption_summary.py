@@ -1,4 +1,4 @@
-"""Consumo em janelas completas de cinco minutos, ligado ao cadastro SQL."""
+"""Consumo em janelas completas de cinco minutos ou uma hora, ligado ao SQL."""
 
 from datetime import timedelta
 from itertools import islice
@@ -35,14 +35,14 @@ def gerar_periodo(cenario):
                     locais[dispositivo["city"]], dia, hora, cenario.seed
                 )["temperature_c"]
                 clima = max(0.6, 1 + (temperatura - 23) * 0.035)
-                for minuto in range(0, 60, 5):
+                for minuto in range(0, 60, cenario.janela_minutos):
                     inicio = horario(dia, hora) + timedelta(minutes=minuto)
                     sorteio = aleatorio(
                         cenario.seed, "janela", dispositivo["device_id"], inicio
                     )
                     litros = (
                         base
-                        / 288
+                        / (1440 / cenario.janela_minutos)
                         * pesos[hora]
                         / normalizador
                         * clima
@@ -55,7 +55,7 @@ def gerar_periodo(cenario):
                         litros *= 3
                     vazando = eventos["vazamento_continuo"] and hora < 6
                     if vazando:
-                        litros += 1.5
+                        litros += 1.5 * cenario.janela_minutos / 5
                     litros = float(round(litros, 4))
                     yield {
                         "_id": identificador(
@@ -64,9 +64,10 @@ def gerar_periodo(cenario):
                         "device_id": dispositivo["device_id"],
                         "user_id": dispositivo["user_id"],
                         "window_started_at": inicio,
-                        "window_finished_at": inicio + timedelta(minutes=5),
+                        "window_finished_at": inicio
+                        + timedelta(minutes=cenario.janela_minutos),
                         "consumption_liters": litros,
-                        "lpm_average": float(round(litros / 5, 6)),
+                        "lpm_average": float(round(litros / cenario.janela_minutos, 6)),
                         "anomaly_detected": vazando or atipico,
                     }
 

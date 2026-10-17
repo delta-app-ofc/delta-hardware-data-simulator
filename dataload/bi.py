@@ -158,13 +158,13 @@ def preflight(cenario, colecoes):
             chave = (inicio, fim)
             if (
                 chave in vistos
-                or (fim - inicio).total_seconds() != 300
-                or inicio.minute % 5
+                or (fim - inicio).total_seconds() != cenario.janela_minutos * 60
+                or inicio.minute % cenario.janela_minutos
                 or inicio.second
                 or inicio.microsecond
             ):
                 raise ValueError(
-                    "Consumo legado duplicado/sobreposto ou fora da grade de cinco minutos. Corrija o período antes de carregar."
+                    "Consumo legado duplicado/sobreposto ou fora da grade escolhida. Corrija o período antes de carregar."
                 )
             vistos.add(chave)
 
@@ -189,8 +189,15 @@ def executar(argv=None):
     parser.add_argument(
         "--max-documentos",
         type=int,
-        default=10000,
-        help="limite total do cenário, somando as sete coleções (padrão: 10000)",
+        default=2000,
+        help="limite total do cenário, somando as sete coleções (padrão: 2000)",
+    )
+    parser.add_argument(
+        "--janela-minutos",
+        type=int,
+        choices=(5, 60),
+        default=5,
+        help="5 para testes de telemetria; 60 para demonstração BI compacta",
     )
     parser.add_argument(
         "--permitir-coordenadas-ausentes",
@@ -208,6 +215,7 @@ def executar(argv=None):
             args.inicio,
             args.fim,
             args.seed,
+            args.janela_minutos,
         )
         if not any(
             cenario.ativo(d, args.fim - timedelta(days=1)) for d in cenario.dispositivos
@@ -233,6 +241,7 @@ def executar(argv=None):
             "simulation": True,
             "dry_run": args.dry_run,
             "seed": args.seed,
+            "window_minutes": args.janela_minutos,
             "inicio": str(args.inicio),
             "fim_exclusivo": str(args.fim),
             "devices": len(cenario.dispositivos),

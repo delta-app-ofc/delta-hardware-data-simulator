@@ -108,6 +108,8 @@ class LoadTests(unittest.TestCase):
                     "2026-09-01",
                     "--fim",
                     fim,
+                    "--max-documentos",
+                    "10000",
                     *extras,
                 ]
             )
@@ -167,6 +169,14 @@ class LoadTests(unittest.TestCase):
             self.assertEqual(self.executar(extras=("--max-documentos", "100")), 1)
             conexao.assert_not_called()
         self.assertEqual(sum(c.escritas for c in self.colecoes.values()), 0)
+
+    def test_modo_horario_cabe_no_teto_de_2000_e_nao_mistura_grades(self):
+        extras = ("--janela-minutos", "60", "--max-documentos", "2000")
+        self.assertEqual(self.executar(extras=extras), 0)
+        self.assertEqual(len(self.colecoes["consumption_summary"].documentos), 192)
+        escritas = sum(c.escritas for c in self.colecoes.values())
+        self.assertEqual(self.executar(), 1)
+        self.assertEqual(escritas, sum(c.escritas for c in self.colecoes.values()))
 
     def test_limite_contabiliza_todas_as_colecoes_sem_truncar(self):
         # Só o consumo caberia; clima, alertas, sessões e demais saídas também contam.

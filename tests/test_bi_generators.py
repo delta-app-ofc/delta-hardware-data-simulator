@@ -268,6 +268,25 @@ class GeneratorsTests(unittest.TestCase):
                 all("latitude" not in d and "longitude" not in d for d in clima)
             )
 
+    def test_janela_horaria_preserva_dia_completo_fluxo_e_contrato(self):
+        cenario = Cenario(self.contexto, date(2026, 9, 1), date(2026, 9, 2), 42, 60)
+        modulo = COLECOES["consumption_summary"][1]
+        documentos = list(modulo.gerar_periodo(cenario))
+        self.assertEqual(len(documentos), len(self.contexto) * 24)
+        por_device = Counter()
+        for doc in documentos:
+            validar_bson(doc, SCHEMAS["db_delta_telemetry.consumption_summary"])
+            self.assertEqual(
+                (doc["window_finished_at"] - doc["window_started_at"]).total_seconds(),
+                3600,
+            )
+            self.assertEqual(doc["window_started_at"].minute, 0)
+            self.assertAlmostEqual(
+                doc["lpm_average"] * 60, doc["consumption_liters"], places=4
+            )
+            por_device[doc["device_id"]] += 1
+        self.assertEqual(set(por_device.values()), {24})
+
 
 if __name__ == "__main__":
     unittest.main()
