@@ -2,6 +2,8 @@
 # Variáveis de ambiente e credenciais
 # ============================================
 .env
+contexto-sql.json
+contexto-sql-*.json
 .env.*
 !.env.example
 !.env.sample

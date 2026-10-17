@@ -14,7 +14,7 @@ Os repositórios do Projeto Delta são independentes. Crie branches e commits de
 
 O `delta-hardware-data-simulator` foi criado para armazenar códigos que simulem os dados que, na versão final do projeto, serão capturados por hardware. Essa finalidade está registrada no `README.md`.
 
-No estado atual, a `main` ainda não contém implementação executável do simulador. Não há linguagem de programação, dependências, formato de payload, protocolo de comunicação, destino de envio, frequência de geração, modelo de dispositivo ou estratégia de testes definidos nos arquivos rastreados. Não invente essas decisões nem apresente a finalidade planejada como funcionalidade pronta.
+O repositório contém uma CLI Python com pymongo, python-dotenv e tzdata. A carga BI usa um catálogo JSON exportado por SELECT do SQL e gera as sete coleções Mongo atuais, com calendário, IDs e perfis compartilhados. Prévias individuais usam dados fictícios; a carga coordenada exige contexto SQL. Consulte o README para os comandos e limites reais. Não execute cargas remotas apenas para validar alterações de código.
 
 ### Estrutura atual do repositório
 
@@ -24,18 +24,44 @@ delta-hardware-data-simulator/
 │   └── workflows/
 │       └── trigger_actions.yml
 ├── .gitignore
+├── .env.example
+├── requirements.txt
+├── Makefile
+├── Dockerfile
+├── docker-compose.test.yml
+├── DOCKER-HELP.md
+├── dataload/
+│   ├── cli.py
+│   ├── bi.py
+│   ├── context.py
+│   ├── mongo_client.py
+│   ├── fixtures/contexto-exemplo.json
+│   └── generators/              # um módulo por coleção; profiles.py compartilhado
+├── sql/exportar-contexto-bi.sql
+├── tests/
+│   ├── test_mongo_client.py
+│   ├── test_bi_generators.py
+│   ├── test_bi_load.py
+│   └── fixtures/mongo-schemas.json
 ├── LICENSE
 └── README.md
 ```
 
 Responsabilidades confirmadas:
 
-- `README.md`: registra a finalidade geral do repositório;
+- `README.md`: comandos, contratos, aplicação e limites de validação;
+- `bi.py`: coordena as sete coleções, preflight e upserts em lotes de até 100;
+- `context.py`: valida o catálogo SQL e mantém calendário/aleatoriedade reproduzíveis;
+- `generators/`: documentos BSON nos campos atuais; `pulses_raw.py` é legado, fora da CLI;
+- `sql/exportar-contexto-bi.sql`: SELECT somente leitura, sem dependência de driver SQL;
+- `tests/`: validação local de contratos/relacionamentos e destino simulado; não comprova insert Mongo;
 - `.github/workflows/trigger_actions.yml`: chama o workflow reutilizável da organização para validar Pull Requests;
 - `.gitignore`: exclui configurações locais de IDE, `.env` e artefatos `__pycache__/`;
 - `LICENSE`: contém a licença do repositório.
 
 O workflow atual é acionado em Pull Requests abertos ou editados e usa `delta-app-ofc/.github/.github/workflows/main.yml@main`. Ele executa as verificações compartilhadas da organização; não há neste repositório um workflow que execute o simulador ou uma suíte de testes automatizados.
+
+Os validators consultados estão em `delta-mongo-database/scripts/`, não no repositório legado `delta-nosql-database`. Preserve campos, tipos e enums dos scripts reais. Coordenadas dos imóveis vêm do SQL; não invente endereços nem acrescente campos geográficos a coleções que não os declaram. O TASK registra decisões históricas; a instrução atual do solicitante prevalece, inclusive para branch, commits e push.
 
 ## 3. Leitura obrigatória do `TASK.md`
 
