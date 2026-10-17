@@ -1,7 +1,7 @@
 PYTHON ?= python
-COLLECTION ?= pulses_raw
+COLLECTION ?= consumption_summary
 N ?= 10
-DRY_RUN ?=
+DRY_RUN ?= --dry-run
 OPTIONS ?=
 
 .PHONY: dataload

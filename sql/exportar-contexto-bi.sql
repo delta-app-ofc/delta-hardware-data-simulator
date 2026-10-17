@@ -20,6 +20,6 @@ FROM (
     SELECT up.user_id,up.association_date FROM public.tb_user_property up
     WHERE up.property_id=p.id ORDER BY up.user_id LIMIT 1
   ) vinculo ON true
-  WHERE d.is_active AND upper(trim(a.state))='SP'
+  WHERE upper(trim(a.state))='SP'
   ORDER BY d.device_id
 ) contexto;

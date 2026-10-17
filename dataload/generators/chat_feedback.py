@@ -6,6 +6,18 @@ from datetime import datetime, timedelta, timezone
 from dataload.mongo_client import obter_colecao
 
 
+def gerar_periodo(cenario):
+    """Avalia as sessões do mesmo cenário; o carregador insere sessões primeiro."""
+    from dataload.context import aleatorio, identificador
+    from dataload.generators.chat_sessions import gerar_periodo as sessoes
+
+    for sessao in sessoes(cenario):
+        sorteio = aleatorio(cenario.seed, "feedback", sessao["_id"])
+        yield {"_id": identificador("chat_feedback", sessao["_id"]),
+               "session_id": sessao["_id"], "is_satisfied": sorteio.random() < 0.8,
+               "user_comment": "AVALIACAO SIMULADA", "created_at": sessao["last_activity_at"] + timedelta(seconds=10)}
+
+
 class SemSessoesChatError(RuntimeError):
     """Indica que não existem sessões que possam receber feedback."""
 
