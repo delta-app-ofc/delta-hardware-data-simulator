@@ -72,13 +72,13 @@ exporte também seus demais dispositivos para não deixar a meta sem cobertura.
 Exemplo independente dos bancos:
 
 ```powershell
-python -m dataload.cli bi --contexto dataload/fixtures/contexto-exemplo.json --inicio 2026-09-01 --fim 2026-10-01 --dry-run
+python -m dataload.cli bi --contexto dataload/fixtures/contexto-exemplo.json --inicio 2026-09-01 --fim 2026-09-03 --dry-run
 ```
 
 Ou confira seu catálogo exportado:
 
 ```powershell
-python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-10-01 --seed 42 --dry-run
+python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-09-03 --seed 42 --max-documentos 10000 --dry-run
 ```
 
 Quando houver endereços SQL sem coordenadas, a opção deve ser explícita:
@@ -95,20 +95,27 @@ tipos BSON. Escapes Unicode no JSON evitam diferenças de encoding no Windows.
 O dia em andamento e dias futuros não são gerados. O cenário aceita 1 a 366 dias
 completos, desde 2020, e até 1000 dispositivos. Só há medições depois da instalação
 **e** do vínculo cadastral; data de instalação recente não autoriza inventar histórico
-anterior. A contagem da prévia pode ser grande: há 288 janelas por dispositivo/dia.
+anterior. Há 288 janelas por dispositivo/dia. Antes de abrir qualquer conexão,
+o comando prepara e conta as sete saídas, com limite total padrão de 10 mil documentos.
+Se exceder, falha sem escrever e sem truncar dias ou relações entre coleções.
+Use `--max-documentos` para definir um limite explícito; ampliar esse valor deve ser
+uma decisão deliberada, conferida na prévia. O limite vale para o cenário solicitado,
+incluindo os documentos que serão atualizados, e não é uma cota acumulada do banco.
+Selecione poucos imóveis completos no catálogo SQL e um período curto para começar;
+não use todos os dispositivos por várias semanas em uma demonstração pequena.
 
 ## 3. Carregar e ampliar gradualmente
 
 Após conferir a prévia e a configuração dos destinos de desenvolvimento:
 
 ```powershell
-python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-10-01 --seed 42
+python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-09-03 --seed 42 --max-documentos 10000
 ```
 
 Para acrescentar o próximo dia, preserve contexto, início e seed e aumente o fim:
 
 ```powershell
-python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-10-02 --seed 42
+python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-09-04 --seed 42 --max-documentos 10000
 ```
 
 Também é possível omitir `--fim` e repetir o comando nos dias seguintes. Isso gera até
@@ -163,6 +170,20 @@ regra de simulação, não evidência de causalidade. Não há campo `is_mock` i
 coleções: preserve o aviso de demonstração nos consumidores. O comando não muda o tipo
 ou a configuração dos gráficos; use os datasets/prompt BI corretos depois da carga.
 
+### Dispersão entre temperatura e consumo
+
+Para visualizar a dispersão, cada ponto do scatter deve representar **um imóvel em
+uma hora**: temperatura observada naquela cidade/hora no eixo X e consumo total
+do imóvel naquela hora, em litros, no eixo Y. Some as janelas de cinco minutos e
+todos os medidores do imóvel antes de parear o clima. Preserve imóvel/data/hora como
+identidade do ponto na consulta e na visualização, para que o gráfico não volte a
+agregar as observações. As faixas de temperatura podem orientar cores ou filtros.
+
+Uma média única por faixa de 5 °C responde outra pergunta e produz poucos pontos,
+escondendo a variação. Com a granularidade imóvel/hora, o título adequado é
+**Consumo horário por imóvel versus temperatura**. Milhares de documentos de consumo
+já produzem centenas de pontos pareados; volume alto não é requisito para esse gráfico.
+
 ## Prévias individuais e código legado
 
 ```powershell
@@ -202,7 +223,8 @@ A suíte usa dados fictícios e um snapshot versionado dos validators executáve
 referências, calendário, cobertura, contadores, perfis, agentes, idempotência e preflight.
 Os testes do carregador usam um destino em memória e não comprovam execução no Mongo.
 
-Nesta revisão, 23 testes locais passaram, incluindo o caso de coordenadas ausentes
+Nesta revisão, 25 testes locais passaram, incluindo o limite total antes de qualquer
+conexão, o caso de coordenadas ausentes
 com autorização explícita de uso sem GPS e normalização de cidades. Esses testes não
 comprovam execução remota. No sandbox Windows, precisaram de `TEMP`/`TMP` apontando
 para uma pasta gravável do workspace.

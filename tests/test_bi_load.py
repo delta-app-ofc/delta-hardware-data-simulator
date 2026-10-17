@@ -162,6 +162,19 @@ class LoadTests(unittest.TestCase):
                 )
             conexao.assert_not_called()
 
+    def test_limite_total_falha_antes_de_conectar_ou_gravar(self):
+        with patch.object(bi, "obter_colecao") as conexao:
+            self.assertEqual(self.executar(extras=("--max-documentos", "100")), 1)
+            conexao.assert_not_called()
+        self.assertEqual(sum(c.escritas for c in self.colecoes.values()), 0)
+
+    def test_limite_contabiliza_todas_as_colecoes_sem_truncar(self):
+        # Só o consumo caberia; clima, alertas, sessões e demais saídas também contam.
+        with patch.object(bi, "obter_colecao") as conexao:
+            self.assertEqual(self.executar(extras=("--max-documentos", "2310")), 1)
+            conexao.assert_not_called()
+        self.assertEqual(sum(c.escritas for c in self.colecoes.values()), 0)
+
     def test_exemplo_ficticio_nao_pode_ser_inserido(self):
         with (
             patch.object(bi, "obter_colecao") as conexao,

@@ -38,6 +38,24 @@ COLECOES = {
 }
 
 
+def preparar_documentos(cenario, limite):
+    """Conta as sete saídas antes de conectar; nunca corta dias ou relações."""
+    if limite < 1:
+        raise ValueError("--max-documentos deve ser positivo.")
+    preparados, total = {}, 0
+    for nome, (_, gerador) in COLECOES.items():
+        documentos = list(islice(gerador.gerar_periodo(cenario), limite - total + 1))
+        total += len(documentos)
+        if total > limite:
+            raise ValueError(
+                f"O cenário ultrapassa o limite total de {limite} documentos nas sete coleções. "
+                "Reduza o período ou selecione menos imóveis completos no catálogo SQL. "
+                "Nenhuma conexão ou gravação foi iniciada."
+            )
+        preparados[nome] = documentos
+    return preparados
+
+
 def filtro_documento(nome, documento):
     """Usa as chaves reais; repetições substituem a observação, sem duplicar janelas."""
     campos = {
@@ -169,6 +187,12 @@ def executar(argv=None):
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
+        "--max-documentos",
+        type=int,
+        default=10000,
+        help="limite total do cenário, somando as sete coleções (padrão: 10000)",
+    )
+    parser.add_argument(
         "--permitir-coordenadas-ausentes",
         action="store_true",
         help="gera os dados Mongo sem inventar coordenadas; imóveis sem GPS continuam indisponíveis no mapa",
@@ -191,6 +215,7 @@ def executar(argv=None):
             raise ValueError(
                 "Não há dispositivo instalado/vinculado no período selecionado."
             )
+        preparados = preparar_documentos(cenario, args.max_documentos)
         colecoes = {}
         if not args.dry_run:
             from pathlib import Path
@@ -216,9 +241,16 @@ def executar(argv=None):
             ),
             "cities": [l["city"] for l in cenario.locais()],
             "collections": {},
+            "max_documents": args.max_documentos,
+            "total_documents": sum(map(len, preparados.values())),
         }
-        for nome, (_, gerador) in COLECOES.items():
-            documentos = iter(gerador.gerar_periodo(cenario))
+        if not args.dry_run:
+            print(
+                f"Cenário conferido: {resumo['total_documents']} documentos nas sete coleções.",
+                file=sys.stderr,
+            )
+        for nome in COLECOES:
+            documentos = iter(preparados[nome])
             total, amostra = 0, None
             while lote := list(islice(documentos, 100)):
                 if amostra is None:
