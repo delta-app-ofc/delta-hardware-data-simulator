@@ -48,7 +48,9 @@ def horario(dia: date, hora: int = 0) -> datetime:
     return datetime.combine(dia, time(hora), FUSO).astimezone(timezone.utc)
 
 
-def carregar_contexto(caminho: str | Path) -> list[dict]:
+def carregar_contexto(
+    caminho: str | Path, *, permitir_coordenadas_ausentes: bool = False
+) -> list[dict]:
     dados = json.loads(Path(caminho).read_text(encoding="utf-8-sig"))
     dispositivos = dados.get("devices") if isinstance(dados, dict) else dados
     if not isinstance(dispositivos, list) or not dispositivos:
@@ -84,13 +86,18 @@ def carregar_contexto(caminho: str | Path) -> list[dict]:
                 )
         for campo in ("region_name", "city", "state", "classification_group"):
             item[campo] = texto(item[campo])
+        item["city"] = chave_cidade(item["city"])
         if item["state"] != "SP" or item["classification_group"] not in (
             "RESIDENCIAL",
             "COMERCIAL",
         ):
             raise ValueError("O cenário BI exige imóveis SP residenciais/comerciais.")
+        sem_coordenadas = item.get("latitude") is None and item.get("longitude") is None
         for campo, limite in (("latitude", 90), ("longitude", 180)):
             valor = item.get(campo)
+            if sem_coordenadas and permitir_coordenadas_ausentes:
+                item[campo] = None
+                continue
             if (
                 isinstance(valor, bool)
                 or not isinstance(valor, (int, float))

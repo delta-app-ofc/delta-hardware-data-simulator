@@ -10,12 +10,14 @@ def observacao(local: dict, dia, hora: int, seed: int) -> dict:
     sorteio = aleatorio(seed, "clima", local["city"], dia, hora)
     ciclo_dias = 7 * math.sin(dia.toordinal() * 2 * math.pi / 19)
     ciclo_horas = 5 * math.cos((hora - 14) * 2 * math.pi / 24)
+    latitude = local.get("latitude")
+    variacao_local = (
+        (latitude + 23) * 0.7
+        if latitude is not None
+        else aleatorio(seed, "clima-base", local["city"]).uniform(-2, 2)
+    )
     temperatura = round(
-        23
-        + ciclo_dias
-        + ciclo_horas
-        + (local["latitude"] + 23) * 0.7
-        + sorteio.uniform(-1, 1),
+        23 + ciclo_dias + ciclo_horas + variacao_local + sorteio.uniform(-1, 1),
         2,
     )
     umidade = round(

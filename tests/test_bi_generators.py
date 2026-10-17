@@ -244,6 +244,30 @@ class GeneratorsTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     carregar_contexto(path)
 
+    def test_coordenadas_ausentes_exigem_opcao_e_nao_sao_inventadas(self):
+        dados = json.loads(EXEMPLO.read_text(encoding="utf-8"))
+        dados["devices"][0]["latitude"] = None
+        dados["devices"][0]["longitude"] = None
+        dados["devices"][0]["city"] = "Sao Paulo"
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "contexto.json"
+            path.write_text(json.dumps(dados), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                carregar_contexto(path)
+            contexto = carregar_contexto(path, permitir_coordenadas_ausentes=True)
+            self.assertIsNone(contexto[0]["latitude"])
+            self.assertIsNone(contexto[0]["longitude"])
+            self.assertEqual(contexto[0]["city"], "SAO PAULO")
+            self.assertEqual(contexto[1]["city"], "SAO PAULO")
+            cenario = Cenario(contexto, date(2026, 9, 1), date(2026, 9, 2))
+            modulo = COLECOES["weather_daily"][1]
+            clima = list(modulo.gerar_periodo(cenario))
+            self.assertEqual(len(clima), 3)
+            self.assertTrue(all(len(d["hours"]) == 24 for d in clima))
+            self.assertTrue(
+                all("latitude" not in d and "longitude" not in d for d in clima)
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

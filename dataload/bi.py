@@ -168,11 +168,22 @@ def executar(argv=None):
         help="dia final exclusivo; padrão hoje, sem incluir o dia em andamento",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--permitir-coordenadas-ausentes",
+        action="store_true",
+        help="gera os dados Mongo sem inventar coordenadas; imóveis sem GPS continuam indisponíveis no mapa",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     try:
         cenario = Cenario(
-            carregar_contexto(args.contexto), args.inicio, args.fim, args.seed
+            carregar_contexto(
+                args.contexto,
+                permitir_coordenadas_ausentes=args.permitir_coordenadas_ausentes,
+            ),
+            args.inicio,
+            args.fim,
+            args.seed,
         )
         if not any(
             cenario.ativo(d, args.fim - timedelta(days=1)) for d in cenario.dispositivos
@@ -200,6 +211,9 @@ def executar(argv=None):
             "inicio": str(args.inicio),
             "fim_exclusivo": str(args.fim),
             "devices": len(cenario.dispositivos),
+            "devices_without_coordinates": sum(
+                d["latitude"] is None for d in cenario.dispositivos
+            ),
             "cities": [l["city"] for l in cenario.locais()],
             "collections": {},
         }

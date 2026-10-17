@@ -44,10 +44,19 @@ rateio entre coproprietários. Confira essa escolha para imóveis compartilhados
 Inclui os dispositivos cadastrados, pois um flag atual de inatividade não informa
 quando o dispositivo foi desativado no passado. Não exporta senhas, e-mails ou nomes.
 
-Coordenadas do imóvel vêm exclusivamente do SQL. Campos incompletos, IDs repetidos,
-regiões contraditórias e grafias diferentes da mesma cidade interrompem a leitura do
-catálogo. A grafia da cidade é mantida em maiúsculas, com Unicode e espaços padronizados.
+Coordenadas do imóvel vêm exclusivamente do SQL. IDs ausentes/repetidos e regiões
+contraditórias interrompem a leitura do catálogo. Cidades são padronizadas em maiúsculas,
+sem acentos e sem espaços repetidos: `São Paulo`, `SÃO PAULO` e `SAO PAULO` convergem
+para `SAO PAULO`. Essa normalização do catálogo não altera os cadastros PostgreSQL.
 `device_id` é preservado exatamente para os cruzamentos.
+
+Por padrão, coordenadas ausentes/invalidas interrompem a leitura. Se os dois campos
+estiverem ausentes, `--permitir-coordenadas-ausentes` permite gerar as coleções Mongo
+mantendo `latitude`/`longitude` desconhecidas no catálogo, sem inventar pontos.
+Uma coordenada preenchida inválida ou um par incompleto continua sendo rejeitado.
+O clima sintético usa então um perfil por cidade; consumo/chat/alertas não recebem
+campos geográficos extras. Essa opção **não resolve o mapa** nem a validação estrita
+de coordenadas da Gold: é necessário corrigir os endereços SQL para esses usos.
 
 **Não use o catálogo de exemplo para uma carga real.** Seus IDs e pontos são fictícios;
 a CLI permite esse arquivo apenas em `--dry-run`. Para o mapa ter várias cidades e
@@ -70,6 +79,12 @@ Ou confira seu catálogo exportado:
 
 ```powershell
 python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-10-01 --seed 42 --dry-run
+```
+
+Quando houver endereços SQL sem coordenadas, a opção deve ser explícita:
+
+```powershell
+python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-10-03 --fim 2026-10-17 --permitir-coordenadas-ausentes --dry-run
 ```
 
 O resultado é Extended JSON, com contagens e uma amostra por coleção. O dry-run não
@@ -187,7 +202,7 @@ A suíte usa dados fictícios e um snapshot versionado dos validators executáve
 referências, calendário, cobertura, contadores, perfis, agentes, idempotência e preflight.
 Os testes do carregador usam um destino em memória e não comprovam execução no Mongo.
 
-Nesta entrega, 22 testes locais passaram. O Docker daemon estava indisponível; não foi
-executado insert contra MongoDB real, Atlas, Neon, Glue ou Databricks. Nenhum dado remoto
-foi inserido/alterado. No sandbox Windows, os testes precisaram de `TEMP`/`TMP` apontando
+Nesta revisão, 23 testes locais passaram, incluindo o caso de coordenadas ausentes
+com autorização explícita de uso sem GPS e normalização de cidades. Esses testes não
+comprovam execução remota. No sandbox Windows, precisaram de `TEMP`/`TMP` apontando
 para uma pasta gravável do workspace.
