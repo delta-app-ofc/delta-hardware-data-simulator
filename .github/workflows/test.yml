@@ -1,0 +1,23 @@
+name: CI técnico
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-tecnico-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilar módulos Python
+        run: python -m compileall -q dataload
+      - name: Gerar dados em ambiente isolado
+        run: docker compose -f docker-compose.test.yml run --build --rm dry-run
