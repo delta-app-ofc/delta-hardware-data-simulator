@@ -132,4 +132,6 @@ desktop.ini
 # ============================================
 # Arquivos locais do projeto
 # ============================================
-TASK.md
+TASK*.md
+# Relatórios locais de teste e cobertura
+reports/

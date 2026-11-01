@@ -5,7 +5,7 @@
 Este repositório gera dados sintéticos para as coleções MongoDB do Projeto
 Delta. Ele atende a dois cenários de desenvolvimento:
 
-- simular os pacotes de pulsos enviados por um ESP32 ao hidrômetro;
+- gerar janelas sintéticas de consumo para `consumption_summary`;
 - popular as demais coleções de telemetria e do aplicativo sem escrever
   comandos `insertMany` manualmente.
 
@@ -31,6 +31,12 @@ Os documentos seguem os validators implementados nos scripts
 [`delta-telemetry/script-collections.js`](../delta-nosql-database/scripts/delta-telemetry/script-collections.js)
 e
 [`delta-app/script-collections.js`](../delta-nosql-database/scripts/delta-app/script-collections.js).
+
+## Compatibilidade com o modelo atual
+
+O hardware agora envia consumo consolidado diretamente para `consumption_summary`. A coleção `pulses_raw` foi removida dos scripts oficiais; a CLI local ainda contém seu gerador legado. Não use os comandos legados para popular o modelo atual, pois inserir em uma coleção ausente pode recriá-la sem o validator esperado.
+
+`weather_daily` existe em `db_delta_app`, com `weather_date` e `wind_speed_mps`, mas não há gerador dessa coleção na CLI local inspecionada. Consulte a [documentação atual de clima](../delta-nosql-database/collections/db_delta_app.md). A migração dos geradores fica pendente; esta atualização modifica somente documentação.
 
 ## Pré-requisitos
 
@@ -69,10 +75,10 @@ A interface suportada em qualquer sistema com Python é:
 python -m dataload.cli <coleção> <quantidade> [--dry-run]
 ```
 
-Exemplo que gera e insere vinte pacotes do ESP32:
+Exemplo que gera e insere vinte janelas de consumo:
 
 ```powershell
-python -m dataload.cli pulses_raw 20
+python -m dataload.cli consumption_summary 20
 ```
 
 Para conferir três documentos sem inserir no banco:
@@ -81,7 +87,11 @@ Para conferir três documentos sem inserir no banco:
 python -m dataload.cli consumption_summary 3 --dry-run
 ```
 
-Para simular o envio do ESP32 em tempo real, usando uma janela de cinco
+### Comandos legados de pulsos (incompatíveis com o modelo atual)
+
+Os exemplos abaixo registram o comportamento ainda presente na CLI; não são o fluxo atual do hardware. O modo contínuo ainda está ligado ao gerador legado.
+
+Para simular os antigos pacotes em tempo real, usando uma janela de cinco
 minutos entre os pacotes:
 
 ```powershell
@@ -152,9 +162,11 @@ gerador e o schema seja corrigida.
 Se `make` estiver instalado, o mesmo comando pode ser executado por variáveis:
 
 ```text
-make dataload COLLECTION=pulses_raw N=20
+make dataload COLLECTION=consumption_summary N=20
 make dataload COLLECTION=alerts_history N=3 DRY_RUN=--dry-run
+# Legado: não usar com o modelo atual
 make dataload COLLECTION=pulses_raw N=3 OPTIONS="--continuo --intervalo-segundos 10"
+# Legado: não usar com o modelo atual
 make dataload COLLECTION=pulses_raw N=3 OPTIONS="--continuo --intervalo-segundos 10 --tempo-maximo 60"
 ```
 
