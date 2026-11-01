@@ -1,0 +1,9 @@
+{
+  "description": "EXEMPLO FICTICIO PARA DRY-RUN. Substitua pelo resultado do SQL antes de inserir.",
+  "devices": [
+    {"device_id":"ESP32-SP-0912","user_id":1,"property_id":1,"region_id":1,"region_name":"GRANDE_SP","city":"SÃO PAULO","state":"SP","classification_group":"RESIDENCIAL","latitude":-23.55052,"longitude":-46.633308,"installation_date":"2026-01-01","association_date":"2026-01-01"},
+    {"device_id":"ESP32-SP-0913","user_id":2,"property_id":2,"region_id":1,"region_name":"GRANDE_SP","city":"SÃO PAULO","state":"SP","classification_group":"COMERCIAL","latitude":-23.5614,"longitude":-46.6559,"installation_date":"2026-01-01","association_date":"2026-01-01"},
+    {"device_id":"ESP32-SP-0914","user_id":3,"property_id":3,"region_id":2,"region_name":"CAMPINAS","city":"CAMPINAS","state":"SP","classification_group":"RESIDENCIAL","latitude":-22.90556,"longitude":-47.06083,"installation_date":"2026-01-01","association_date":"2026-01-01"},
+    {"device_id":"ESP32-SP-0915","user_id":4,"property_id":4,"region_id":3,"region_name":"BAIXADA_SANTISTA","city":"SANTOS","state":"SP","classification_group":"COMERCIAL","latitude":-23.96083,"longitude":-46.33361,"installation_date":"2026-01-01","association_date":"2026-01-01"}
+  ]
+}
