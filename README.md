@@ -7,7 +7,46 @@ validators do `delta-mongo-database` e os vínculos cadastrais do PostgreSQL.
 A implementação usa Python, pymongo e funções pequenas por coleção; não implementa
 firmware, backend, API, Gold ou dashboard.
 
-## Instalação e configuração
+- gerar janelas sintéticas de consumo para `consumption_summary`;
+- popular as demais coleções de telemetria e do aplicativo sem escrever
+  comandos `insertMany` manualmente.
+
+O projeto é somente um gerador de dados. Ele não implementa firmware, envio
+HTTP, processamento de telemetria ou regras do backend.
+
+## O que está implementado
+
+A CLI gera de 1 a 100 documentos por execução para oito coleções:
+
+| Banco                | Coleção               | Finalidade                       |
+|----------------------|-----------------------|----------------------------------|
+| `db_delta_telemetry` | `pulses_raw`          | Pacotes de pulsos do ESP32       |
+| `db_delta_telemetry` | `consumption_summary` | Resumos de consumo por janela    |
+| `db_delta_telemetry` | `device_status`       | Estado atual dos dispositivos    |
+| `db_delta_app`       | `user_preferences`    | Preferências dos usuários        |
+| `db_delta_app`       | `alerts_history`      | Histórico de alertas             |
+| `db_delta_app`       | `chat_sessions`       | Sessões e mensagens do chatbot   |
+| `db_delta_app`       | `chat_feedback`       | Avaliações vinculadas às sessões |
+| `db_delta_app`       | `weather_daily`       | Observações meteorológicas diárias |
+
+Os documentos seguem os validators implementados nos scripts
+[`delta-telemetry/script-collections.js`](../delta-nosql-database/scripts/delta-telemetry/script-collections.js)
+e
+[`delta-app/script-collections.js`](../delta-nosql-database/scripts/delta-app/script-collections.js).
+
+## Compatibilidade com o modelo atual
+
+O hardware agora envia consumo consolidado diretamente para `consumption_summary`. A coleção `pulses_raw` foi removida dos scripts oficiais; a CLI local ainda contém seu gerador legado. Não use os comandos legados para popular o modelo atual, pois inserir em uma coleção ausente pode recriá-la sem o validator esperado.
+
+`weather_daily` existe em `db_delta_app`, com `weather_date` e `wind_speed_mps`, mas não há gerador dessa coleção na CLI local inspecionada. Consulte a [documentação atual de clima](../delta-nosql-database/collections/db_delta_app.md). A migração dos geradores fica pendente; esta atualização modifica somente documentação.
+
+## Pré-requisitos
+
+- Python 3.10 ou superior;
+- MongoDB com as coleções e os validators do Projeto Delta já criados;
+- `make` apenas se quiser usar o atalho opcional do Makefile.
+
+Instale as dependências na raiz deste repositório:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -110,6 +149,12 @@ Após conferir a prévia e a configuração dos destinos de desenvolvimento:
 
 ```powershell
 python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-09-03 --seed 42 --max-documentos 2000 --janela-minutos 60
+python -m dataload.cli device_status 5
+python -m dataload.cli user_preferences 5
+python -m dataload.cli alerts_history 10
+python -m dataload.cli chat_sessions 4
+python -m dataload.cli chat_feedback 4
+python -m dataload.cli weather_daily 3 --dry-run
 ```
 
 Para acrescentar o próximo dia, preserve contexto, início e seed e aumente o fim:
