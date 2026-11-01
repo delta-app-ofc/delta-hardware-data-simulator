@@ -14,19 +14,20 @@ HTTP, processamento de telemetria ou regras do backend.
 
 ## O que está implementado
 
-A CLI gera de 1 a 100 documentos por execução para sete coleções:
+A CLI gera de 1 a 100 documentos por execução para oito coleções:
 
-| Banco                | Coleção               | Finalidade                           |
-|----------------------|-----------------------|--------------------------------------|
-| `db_delta_telemetry` | `pulses_raw`          | Gerador legado; fora do modelo atual |
-| `db_delta_telemetry` | `consumption_summary` | Resumos de consumo por janela        |
-| `db_delta_telemetry` | `device_status`       | Estado atual dos dispositivos        |
-| `db_delta_app`       | `user_preferences`    | Preferências dos usuários            |
-| `db_delta_app`       | `alerts_history`      | Histórico de alertas                 |
-| `db_delta_app`       | `chat_sessions`       | Sessões e mensagens do chatbot       |
-| `db_delta_app`       | `chat_feedback`       | Avaliações vinculadas às sessões     |
+| Banco                | Coleção               | Finalidade                       |
+|----------------------|-----------------------|----------------------------------|
+| `db_delta_telemetry` | `pulses_raw`          | Pacotes de pulsos do ESP32       |
+| `db_delta_telemetry` | `consumption_summary` | Resumos de consumo por janela    |
+| `db_delta_telemetry` | `device_status`       | Estado atual dos dispositivos    |
+| `db_delta_app`       | `user_preferences`    | Preferências dos usuários        |
+| `db_delta_app`       | `alerts_history`      | Histórico de alertas             |
+| `db_delta_app`       | `chat_sessions`       | Sessões e mensagens do chatbot   |
+| `db_delta_app`       | `chat_feedback`       | Avaliações vinculadas às sessões |
+| `db_delta_app`       | `weather_daily`       | Observações meteorológicas diárias |
 
-Os geradores devem acompanhar os validators implementados nos scripts
+Os documentos seguem os validators implementados nos scripts
 [`delta-telemetry/script-collections.js`](../delta-nosql-database/scripts/delta-telemetry/script-collections.js)
 e
 [`delta-app/script-collections.js`](../delta-nosql-database/scripts/delta-app/script-collections.js).
@@ -128,6 +129,7 @@ python -m dataload.cli user_preferences 5
 python -m dataload.cli alerts_history 10
 python -m dataload.cli chat_sessions 4
 python -m dataload.cli chat_feedback 4
+python -m dataload.cli weather_daily 3 --dry-run
 ```
 
 Nomes de coleção inválidos, quantidades que não sejam inteiras e valores fora
