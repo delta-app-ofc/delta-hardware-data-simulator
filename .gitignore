@@ -135,3 +135,6 @@ desktop.ini
 TASK*.md
 # Relatórios locais de teste e cobertura
 reports/
+
+# Regras obrigatórias de artefatos locais do CI
+.scannerwork/
