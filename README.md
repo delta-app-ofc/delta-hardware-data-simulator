@@ -1,52 +1,49 @@
-# Delta Hardware Data Simulator
+# Delta · Simulador de Dados IoT
 
-## Objetivo
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Container](https://img.shields.io/badge/Docker-Python%203.12-2496ED?logo=docker&logoColor=white)
+![PyMongo](https://img.shields.io/badge/MongoDB-client%20PyMongo-47A248?logo=mongodb&logoColor=white)
+![Coleções](https://img.shields.io/badge/MongoDB-7%20cole%C3%A7%C3%B5es-47A248?logo=mongodb&logoColor=white)
+![BI](https://img.shields.io/badge/Delta%20BI-13%20KPIs-1677C8)
+
+O simulador usa vínculos cadastrais do PostgreSQL para gerar dados sintéticos de consumo e alimentar as coleções MongoDB usadas em demonstrações de BI.
+A CLI prepara telemetria, clima, status dos dispositivos, alertas, preferências e conversas. O modo dry-run permite revisar o cenário antes da carga.
+
+**Tags:** `python` · `pymongo` · `mongodb` · `iot` · `telemetria-sintética` · `carga-bi` · `contexto-sql` · `dry-run` · `delta`
+
+## Sumário
+
+- [Visão geral](#visão-geral)
+- [Escopo do simulador](#escopo-do-simulador)
+- [Estrutura do repositório](#estrutura-do-repositório)
+- [Instalação e configuração](#instalação-e-configuração)
+- [Exportar os vínculos do SQL](#1-exportar-os-vínculos-do-sql)
+- [Conferir o cenário sem acessar MongoDB](#2-conferir-o-cenário-sem-acessar-mongodb)
+- [Carregar e ampliar gradualmente](#3-carregar-e-ampliar-gradualmente)
+- [Coleções e coerência dos dados](#coleções-e-coerência-dos-dados)
+- [Prévias individuais e código legado](#prévias-individuais-e-código-legado)
+- [Testes](#testes)
+
+## Visão geral
+
+| Parte | O que faz |
+|---|---|
+| Entrada | JSON de contexto exportado por `sql/exportar-contexto-bi.sql`, com IDs, imóveis, dispositivos, calendário e vínculos reais do SQL |
+| Saída | Sete coleções MongoDB usadas pelo cenário BI: consumo, status, clima, preferências, alertas, sessões e feedback |
+| Geração | Dados sintéticos determinísticos por `seed`; intervalos e referências preservam coerência entre coleções |
+| Prévia | `--dry-run` conta e exibe amostras em Extended JSON sem abrir conexão MongoDB para a carga BI |
+| Escrita | Preflight de validators/índices seguido de upserts em lotes; a conexão é feita apenas para a carga real |
+| Compatibilidade | Python 3.10+; a imagem Docker usa Python 3.12; dependências Python estão em `requirements.txt` |
+| Qualidade | Suíte local com unittest; detalhes e comando na seção Testes |
+
+## Escopo do simulador
 
 Gerar dados sintéticos consistentes para os 13 KPIs BI do Delta, respeitando os
 validators do `delta-mongo-database` e os vínculos cadastrais do PostgreSQL.
 A implementação usa Python, pymongo e funções pequenas por coleção; não implementa
 firmware, backend, API, Gold ou dashboard.
 
-- gerar janelas sintéticas de consumo para `consumption_summary`;
-- popular as demais coleções de telemetria e do aplicativo sem escrever
-  comandos `insertMany` manualmente.
-
-O projeto é somente um gerador de dados. Ele não implementa firmware, envio
-HTTP, processamento de telemetria ou regras do backend.
-
-## O que está implementado
-
-A CLI gera de 1 a 100 documentos por execução para oito coleções:
-
-| Banco                | Coleção               | Finalidade                       |
-|----------------------|-----------------------|----------------------------------|
-| `db_delta_telemetry` | `pulses_raw`          | Pacotes de pulsos do ESP32       |
-| `db_delta_telemetry` | `consumption_summary` | Resumos de consumo por janela    |
-| `db_delta_telemetry` | `device_status`       | Estado atual dos dispositivos    |
-| `db_delta_app`       | `user_preferences`    | Preferências dos usuários        |
-| `db_delta_app`       | `alerts_history`      | Histórico de alertas             |
-| `db_delta_app`       | `chat_sessions`       | Sessões e mensagens do chatbot   |
-| `db_delta_app`       | `chat_feedback`       | Avaliações vinculadas às sessões |
-| `db_delta_app`       | `weather_daily`       | Observações meteorológicas diárias |
-
-Os documentos seguem os validators implementados nos scripts
-[`delta-telemetry/script-collections.js`](../delta-nosql-database/scripts/delta-telemetry/script-collections.js)
-e
-[`delta-app/script-collections.js`](../delta-nosql-database/scripts/delta-app/script-collections.js).
-
-## Compatibilidade com o modelo atual
-
-O hardware agora envia consumo consolidado diretamente para `consumption_summary`. A coleção `pulses_raw` foi removida dos scripts oficiais; a CLI local ainda contém seu gerador legado. Não use os comandos legados para popular o modelo atual, pois inserir em uma coleção ausente pode recriá-la sem o validator esperado.
-
-`weather_daily` existe em `db_delta_app`, com `weather_date` e `wind_speed_mps`, mas não há gerador dessa coleção na CLI local inspecionada. Consulte a [documentação atual de clima](../delta-nosql-database/collections/db_delta_app.md). A migração dos geradores fica pendente; esta atualização modifica somente documentação.
-
-## Pré-requisitos
-
-- Python 3.10 ou superior;
-- MongoDB com as coleções e os validators do Projeto Delta já criados;
-- `make` apenas se quiser usar o atalho opcional do Makefile.
-
-Instale as dependências na raiz deste repositório:
+## Instalação e configuração
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -149,12 +146,6 @@ Após conferir a prévia e a configuração dos destinos de desenvolvimento:
 
 ```powershell
 python -m dataload.cli bi --contexto contexto-sql.json --inicio 2026-09-01 --fim 2026-09-03 --seed 42 --max-documentos 2000 --janela-minutos 60
-python -m dataload.cli device_status 5
-python -m dataload.cli user_preferences 5
-python -m dataload.cli alerts_history 10
-python -m dataload.cli chat_sessions 4
-python -m dataload.cli chat_feedback 4
-python -m dataload.cli weather_daily 3 --dry-run
 ```
 
 Para acrescentar o próximo dia, preserve contexto, início e seed e aumente o fim:
@@ -176,12 +167,9 @@ Antes de escrever, o carregador confere as sete coleções, os validators de cha
 o índice único de clima por localização e `weather_date`, e conflitos legados no período. Grades de cinco minutos e uma hora não podem ser misturadas no mesmo período/dispositivo.
 Se encontrar clima com grafia/calendário antigo ou consumo duplicado/fora da grade,
 pede correção explícita. Não executa `drop`, `delete`, `collMod` ou criação de índices.
-Essas verificações não substituem uma auditoria completa de dados fora do período.
+As verificações abrangem o período selecionado para a carga.
 
-O carregador não limpa dados antigos automaticamente. Em uma base já inconsistente,
-normalize os documentos existentes ou use uma instância de desenvolvimento limpa com os
-scripts atuais do Mongo. O povoamento novo não garante que registros legados fora do
-recorte estejam corretos. Erros de validator/conexão continuam visíveis.
+O carregador trabalha no período selecionado e mantém os dados fora desse recorte. Para usar documentos antigos em outro formato, normalize-os antes da carga ou prepare uma instância de desenvolvimento com os scripts atuais do Mongo. Erros de validator e conexão aparecem no terminal.
 
 As coleções/bancos não participam de uma transação conjunta. Uma falha de execução pode
 deixar parte da carga concluída; corrija a causa e repita o mesmo comando. Execute uma
@@ -257,19 +245,12 @@ make dataload COLLECTION=consumption_summary N=3
 No Windows sem `make`, use a CLI Python. A infraestrutura Docker existente permanece
 como conveniência de dry-run; consulte [DOCKER-HELP.md](DOCKER-HELP.md).
 
-## Testes e limites de validação
+## Testes
 
 ```powershell
 python -m unittest discover -s tests -v
 ```
 
-A suíte usa dados fictícios e um snapshot versionado dos validators executáveis em
-`tests/fixtures/mongo-schemas.json`, com hashes das fontes. Confere BSON, campos declarados,
-referências, calendário, cobertura, contadores, perfis, agentes, idempotência e preflight.
-Os testes do carregador usam um destino em memória e não comprovam execução no Mongo.
+A suíte usa dados fictícios e o snapshot versionado dos validators em tests/fixtures/mongo-schemas.json. Ela confere BSON, campos, referências, calendário, cobertura, contadores, perfis, agentes, idempotência e preflight; o carregador usa um destino em memória nos testes.
 
-Nesta revisão, 27 testes locais passaram, incluindo o limite total antes de qualquer
-conexão, o caso de coordenadas ausentes
-com autorização explícita de uso sem GPS e normalização de cidades. Esses testes não
-comprovam execução remota. No sandbox Windows, precisaram de `TEMP`/`TMP` apontando
-para uma pasta gravável do workspace.
+
