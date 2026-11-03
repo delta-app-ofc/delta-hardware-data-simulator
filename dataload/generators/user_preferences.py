@@ -1,27 +1,25 @@
-"""Gerador da coleção user_preferences."""
+"""Metas dos mesmos usuários que possuem medições no cenário."""
 
-import random
+from itertools import islice
+
+from dataload.context import aleatorio, exemplo, identificador
+from dataload.generators.profiles import base_diaria
 
 
-HORARIOS_SILENCIOSOS = (
-    {"start_hour": "21:00", "end_hour": "06:00"},
-    {"start_hour": "22:00", "end_hour": "06:00"},
-    {"start_hour": "22:30", "end_hour": "07:00"},
-    {"start_hour": "23:00", "end_hour": "07:00"},
-)
+def gerar_periodo(cenario):
+    for usuario in cenario.usuarios():
+        medidores = [d for d in cenario.dispositivos if d["user_id"] == usuario]
+        base = sum(base_diaria(d, cenario) for d in medidores)
+        sorteio = aleatorio(cenario.seed, "meta", usuario)
+        yield {
+            "_id": identificador("user_preferences", usuario),
+            "user_id": usuario,
+            "daily_liters_target": max(1, round(base * sorteio.uniform(0.85, 1.20))),
+            "notifications_enabled": True,
+            "dark_mode_enabled": sorteio.choice((True, False)),
+            "quiet_hours": {"start_hour": "22:00", "end_hour": "06:00"},
+        }
 
 
 def gerar(quantidade: int) -> list[dict]:
-    """Gera preferências com um user_id BSON int32 único por documento."""
-    user_ids = random.sample(range(1_000, 2_000_000_000), quantidade)
-
-    return [
-        {
-            "user_id": user_id,
-            "daily_liters_target": random.randint(100, 500),
-            "notifications_enabled": random.choice((True, False)),
-            "quiet_hours": random.choice(HORARIOS_SILENCIOSOS).copy(),
-            "dark_mode_enabled": random.choice((True, False)),
-        }
-        for user_id in user_ids
-    ]
+    return list(islice(gerar_periodo(exemplo()), quantidade))

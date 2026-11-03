@@ -1,4 +1,4 @@
-"""Interface de linha de comando para gerar e inserir dados sintéticos."""
+"""Interface para prévias individuais e povoamento BI coordenado."""
 
 import argparse
 import sys
@@ -12,6 +12,10 @@ from dataload.generators import (
     chat_sessions,
     consumption_summary,
     device_status,
+    user_preferences,
+    weather_daily,
+)
+from dataload.mongo_client import ConfiguracaoMongoError
     leak_scenario,
     pulses_raw,
     user_preferences,
@@ -32,7 +36,6 @@ BANCOS_POR_COLECAO = {
 }
 
 GERADORES = {
-    "pulses_raw": pulses_raw.gerar,
     "consumption_summary": consumption_summary.gerar,
     "device_status": device_status.gerar,
     "user_preferences": user_preferences.gerar,
@@ -44,48 +47,34 @@ GERADORES = {
 
 
 class ParserDataload(argparse.ArgumentParser):
-    """Padroniza erros da CLI com código de saída 1."""
-
     def error(self, message: str) -> None:
         self.print_usage(sys.stderr)
         self.exit(1, f"Erro: {message}\n")
 
 
 def inteiro(value: str) -> int:
-    """Converte a quantidade e produz uma mensagem amigável em caso de erro."""
     try:
         return int(value)
     except ValueError as erro:
-        raise argparse.ArgumentTypeError("a quantidade deve ser um número inteiro") from erro
+        raise argparse.ArgumentTypeError(
+            "a quantidade deve ser um número inteiro"
+        ) from erro
 
 
 def criar_parser() -> ParserDataload:
     parser = ParserDataload(
-        description="Gera dados sintéticos válidos para os bancos MongoDB do Projeto Delta."
+        description="Prévia: <coleção> <quantidade> --dry-run. Carga: bi --contexto ... --inicio ..."
     )
-    parser.add_argument("colecao", help="nome da coleção que receberá os documentos")
-    parser.add_argument("quantidade", type=inteiro, help="quantidade entre 1 e 100")
+    parser.add_argument(
+        "colecao", help="coleção atual do MongoDB; pulses_raw foi descontinuada"
+    )
+    parser.add_argument(
+        "quantidade", type=inteiro, help="máximo entre 1 e 100 documentos"
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="imprime os documentos sem inserir no MongoDB",
-    )
-    parser.add_argument(
-        "--continuo",
-        action="store_true",
-        help="gera os pacotes em tempo real, respeitando o intervalo informado",
-    )
-    parser.add_argument(
-        "--intervalo-segundos",
-        type=inteiro,
-        default=300,
-        help="intervalo entre pacotes no modo --continuo (padrão: 300)",
-    )
-    parser.add_argument(
-        "--tempo-maximo",
-        type=inteiro,
-        default=3600,
-        help="tempo máximo do modo --continuo, em segundos (padrão: 3600)",
+        help="imprime uma prévia sem inserir no MongoDB",
     )
     parser.add_argument(
         "--scenario",
@@ -111,12 +100,15 @@ def validar_argumentos(
 ) -> None:
     """Valida todas as regras antes que algum documento seja gerado."""
     if colecao not in GERADORES:
-        nomes_validos = ", ".join(GERADORES)
-        parser.error(f"coleção inválida '{colecao}'. Opções: {nomes_validos}")
-
+        parser.error(f"coleção inválida '{colecao}'. Opções: {', '.join(GERADORES)}")
     if not 1 <= quantidade <= 100:
         parser.error("a quantidade deve estar entre 1 e 100")
 
+
+def executar(argv: list[str] | None = None) -> int:
+    argumentos_cli = sys.argv[1:] if argv is None else argv
+    if argumentos_cli and argumentos_cli[0] == "bi":
+        from dataload.bi import executar as executar_bi
     if continuo and colecao != "pulses_raw":
         parser.error("a opção --continuo só pode ser usada com pulses_raw")
 
@@ -143,7 +135,18 @@ def executar(argv: list[str] | None = None) -> int:
         argumentos.scenario,
     )
 
+        return executar_bi(argumentos_cli[1:])
+    parser = criar_parser()
+    argumentos = parser.parse_args(argumentos_cli)
+    validar_argumentos(parser, argumentos.colecao, argumentos.quantidade)
+    if not argumentos.dry_run:
+        parser.error(
+            "para inserir dados vinculados ao SQL, use 'bi --contexto ... --inicio ...'; comandos individuais são somente --dry-run"
+        )
     try:
+        documentos = GERADORES[argumentos.colecao](argumentos.quantidade)
+        print(json_util.dumps(documentos, indent=2))
+        return 0
         if argumentos.continuo:
             gerador = pulses_raw.gerar_continuo(
                 intervalo_segundos=argumentos.intervalo_segundos,
@@ -190,12 +193,6 @@ def executar(argv: list[str] | None = None) -> int:
     except (ConfiguracaoMongoError, chat_feedback.SemSessoesChatError) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 1
-
-    print(
-        f"{len(resultado.inserted_ids)} documento(s) inserido(s) em "
-        f"{BANCOS_POR_COLECAO[argumentos.colecao]}.{argumentos.colecao}."
-    )
-    return 0
 
 
 if __name__ == "__main__":

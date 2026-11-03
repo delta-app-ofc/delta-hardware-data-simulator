@@ -1,62 +1,75 @@
-"""Gerador de sessões e mensagens do chatbot."""
+"""Sessões por usuário/dia com durações individuais dos especialistas."""
 
-import random
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
+from itertools import islice
+
+from dataload.context import aleatorio, exemplo, horario, identificador
+
+AGENTES = ("consumption", "forecast", "leak")
+CONVERSAS = (
+    ("Como está meu consumo?", "Consulte seu consumo e a meta diária no aplicativo."),
+    ("Qual a previsão de consumo?", "A previsão considera seu histórico de consumo."),
+    (
+        "Há algum vazamento?",
+        "Confira os alertas e verifique os pontos de uso do imóvel.",
+    ),
+)
 
 
-CONVERSAS = [
-    (
-        "Como está meu consumo de água hoje?",
-        "Seu consumo está dentro da meta diária configurada.",
-    ),
-    (
-        "O que significa o alerta de fluxo atípico?",
-        "Ele indica um consumo diferente do padrão recente do imóvel.",
-    ),
-    (
-        "Como posso reduzir meu consumo?",
-        "Verifique vazamentos e evite deixar torneiras abertas sem necessidade.",
-    ),
-]
+def gerar_periodo(cenario):
+    for dia in cenario.dias():
+        for usuario in cenario.usuarios():
+            if not any(
+                d["user_id"] == usuario and cenario.ativo(d, dia)
+                for d in cenario.dispositivos
+            ):
+                continue
+            mensagens = []
+            inicio = horario(dia, 12)
+            for indice, agente in enumerate(AGENTES):
+                sorteio = aleatorio(cenario.seed, "chamada", usuario, dia, agente)
+                pergunta, resposta = CONVERSAS[indice]
+                duracao = int(sorteio.lognormvariate(7.1 + indice * 0.15, 0.5))
+                if sorteio.random() < 0.04:
+                    duracao *= 4  # Outliers positivos para a distribuição do boxplot.
+                falha = sorteio.random() < 0.15
+                status = sorteio.choice((429, 500, 503)) if falha else 200
+                enviada = inicio + timedelta(minutes=indice * 3)
+                mensagens.extend(
+                    [
+                        {
+                            "role": "user",
+                            "content_type": "text",
+                            "content": pergunta,
+                            "sent_at": enviada,
+                            "api_status_code": 200,
+                        },
+                        {
+                            "role": "bot",
+                            "content_type": "text",
+                            "content": (
+                                "Falha técnica simulada; tente novamente."
+                                if falha
+                                else resposta
+                            ),
+                            "sent_at": enviada + timedelta(milliseconds=duracao),
+                            "api_status_code": status,
+                            "agent_name": agente,
+                            "response_time_ms": duracao,
+                        },
+                    ]
+                )
+            yield {
+                "_id": identificador("chat_sessions", usuario, dia),
+                "user_id": usuario,
+                "started_at": inicio,
+                "last_activity_at": mensagens[-1]["sent_at"],
+                "is_open": False,
+                "is_active": False,
+                "is_deleted": False,
+                "messages": mensagens,
+            }
 
 
 def gerar(quantidade: int) -> list[dict]:
-    """Gera sessões com uma pergunta e uma resposta em ordem cronológica."""
-    agora = datetime.now(timezone.utc).replace(microsecond=0)
-    documentos = []
-
-    for indice in range(quantidade):
-        pergunta, resposta = random.choice(CONVERSAS)
-        started_at = agora - timedelta(minutes=(quantidade - indice) * 10)
-        pergunta_enviada_em = started_at + timedelta(seconds=5)
-        resposta_enviada_em = started_at + timedelta(seconds=12)
-        is_open = random.choice([True, False])
-
-        documentos.append(
-            {
-                "user_id": random.randint(1, 1_000_000),
-                "started_at": started_at,
-                "last_activity_at": resposta_enviada_em,
-                "is_open": is_open,
-                "is_active": is_open and random.choice([True, False]),
-                "is_deleted": False,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content_type": "text",
-                        "content": pergunta,
-                        "sent_at": pergunta_enviada_em,
-                        "api_status_code": 200,
-                    },
-                    {
-                        "role": "bot",
-                        "content_type": "text",
-                        "content": resposta,
-                        "sent_at": resposta_enviada_em,
-                        "api_status_code": 200,
-                    },
-                ],
-            }
-        )
-
-    return documentos
+    return list(islice(gerar_periodo(exemplo()), quantidade))
